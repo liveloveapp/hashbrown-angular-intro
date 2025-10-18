@@ -153,6 +153,7 @@ export class ChatPanelComponent {
           lightId: s.string('The id of the light'),
         },
       }),
+      // 2. Expose the `LightList` component
     ],
     tools: [
       createTool({
@@ -164,6 +165,7 @@ export class ChatPanelComponent {
         },
       })
     ]
+    // 1. Create a `controlLight()` tool
   });
 
   sendMessage(message: string) {
