@@ -146,6 +146,8 @@ export class ChatPanelComponent {
         },
       }),
     ],
+    // 1. Add tools array.
+    // 2. Use the `createTool()` function to define a `getLights` tool.
   });
 
   sendMessage(message: string) {
