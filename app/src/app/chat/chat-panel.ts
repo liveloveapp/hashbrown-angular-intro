@@ -1,4 +1,10 @@
-import { Component, inject } from '@angular/core';
+import {
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { chatResource } from '@hashbrownai/angular';
 import { SmartHome } from '../smart-home';
@@ -19,18 +25,19 @@ import { Composer } from './composer';
       appSquircleBorderColor="#EEC7AD"
     >
       @if (chat.isLoading()) {
-      <div class="chat-loading">
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      </div>
+        <div class="chat-loading">
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        </div>
       }
       <app-chat-layout>
-        <div class="chat-messages">
+        <div class="chat-messages" #contentDiv>
           @for (message of chat.value(); track $index) {
-          <div class="chat-message">
-            <p>{{ message.content }}</p>
-          </div>
-          } @if (chat.value().length === 0) {
-          <app-chat-prompts (selectPrompt)="sendMessage($event)" />
+            <div class="chat-message">
+              <p>{{ message.content }}</p>
+            </div>
+          }
+          @if (chat.value().length === 0) {
+            <app-chat-prompts (selectPrompt)="sendMessage($event)" />
           }
         </div>
         <app-chat-composer
@@ -80,6 +87,21 @@ import { Composer } from './composer';
 })
 export class ChatPanelComponent {
   smartHome = inject(SmartHome);
+
+  readonly contentDiv =
+    viewChild.required<ElementRef<HTMLDivElement>>('contentDiv');
+
+  constructor() {
+    effect(() => {
+      // React when messages change
+      this.chat.value();
+
+      requestAnimationFrame(() => {
+        this.contentDiv().nativeElement.scrollTop =
+          this.contentDiv().nativeElement.scrollHeight;
+      });
+    });
+  }
 
   chat = chatResource({
     model: 'gpt-4.1',
