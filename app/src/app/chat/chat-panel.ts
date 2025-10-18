@@ -1,22 +1,25 @@
-import {
-  Component,
-  effect,
-  ElementRef,
-  inject,
-  viewChild,
-} from '@angular/core';
+import { Component, effect, ElementRef, inject, viewChild } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { chatResource } from '@hashbrownai/angular';
+import { prompt, s } from '@hashbrownai/core';
+import { exposeComponent, RenderMessageComponent, uiChatResource } from '@hashbrownai/angular';
 import { SmartHome } from '../smart-home';
 import { Squircle } from '../squircle';
 import { ChatLayout } from './chat-layout';
 import { ChatPrompts } from './chat-prompts';
 import { Composer } from './composer';
+import { Markdown } from './markdown';
 
 @Component({
   selector: 'app-chat-panel',
   standalone: true,
-  imports: [MatProgressBarModule, Composer, ChatLayout, ChatPrompts, Squircle],
+  imports: [
+    MatProgressBarModule,
+    Composer,
+    ChatLayout,
+    ChatPrompts,
+    Squircle,
+    RenderMessageComponent,
+  ],
   template: `
     <div
       class="container"
@@ -32,9 +35,14 @@ import { Composer } from './composer';
       <app-chat-layout>
         <div class="chat-messages" #contentDiv>
           @for (message of chat.value(); track $index) {
-            <div class="chat-message">
-              <p>{{ message.content }}</p>
-            </div>
+            @switch (message.role) {
+              @case ('user') {
+                <p>{{ message.content }}</p>
+              }
+              @case ('assistant') {
+                <hb-render-message [message]="message" />
+              }
+            }
           }
           @if (chat.value().length === 0) {
             <app-chat-prompts (selectPrompt)="sendMessage($event)" />
@@ -103,11 +111,41 @@ export class ChatPanelComponent {
     });
   }
 
-  chat = chatResource({
+  chat = uiChatResource({
     model: 'gpt-4.1',
-    debugName: 'chatResource',
-    system:
-      'You are a helpful assistant that can answer questions and help with tasks.',
+    debugName: 'ui-chat',
+    system: prompt`
+      ### ROLE & TONE
+      You are **Smart Home Assistant**, a friendly and concise AI assistant for a
+      smart home web application.
+
+      - Voice: clear, helpful, and respectful.
+      - Audience: users controlling lights and scenes via the web interface.
+
+      ### RULES
+      1. **Never** expose raw data or internal code details.
+      2. For commands you cannot perform, **admit it** and suggest an alternative.
+      3. For actionable requests (e.g., changing light settings), **precede** any
+        explanation with the appropriate tool call.
+
+
+      ### EXAMPLES
+
+      <user>Hello</user>
+       <assistant>
+        <ui>
+          <app-markdown data="How may I assist you?" />
+        </ui>
+      </assistant>
+    `,
+    components: [
+      exposeComponent(Markdown, {
+        description: 'Show markdown to the user',
+        input: {
+          data: s.streaming.string('The markdown content'),
+        },
+      }),
+    ],
   });
 
   sendMessage(message: string) {
