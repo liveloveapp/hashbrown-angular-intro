@@ -1,8 +1,20 @@
-import { Component, effect, ElementRef, inject, viewChild } from '@angular/core';
+import {
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import {
+  createTool,
+  exposeComponent,
+  RenderMessageComponent,
+  uiChatResource,
+} from '@hashbrownai/angular';
 import { prompt, s } from '@hashbrownai/core';
-import { createTool, exposeComponent, RenderMessageComponent, uiChatResource } from '@hashbrownai/angular';
 import { LightCard } from '../lights/light-card';
+import { LightList } from '../lights/light-list';
 import { SmartHome } from '../smart-home';
 import { Squircle } from '../squircle';
 import { ChatLayout } from './chat-layout';
@@ -138,6 +150,20 @@ export class ChatPanelComponent {
           <app-markdown data="How may I assist you?" />
         </ui>
       </assistant>
+
+      <user>What are the lights in the living room?</user>
+      <assistant>
+        <tool-call>getLights</tool-call>
+      </assistant>
+      <assistant>
+        <ui>
+          <app-markdown data="Here are the lights in the living room:" />
+          <app-light-list title="Living Room Lights">
+            <app-light-card lightId="..." />
+            <app-light-card lightId="..." />
+          </app-light-list>
+        </ui>
+      </assistant>
     `,
     components: [
       exposeComponent(Markdown, {
@@ -153,7 +179,13 @@ export class ChatPanelComponent {
           lightId: s.string('The id of the light'),
         },
       }),
-      // 2. Expose the `LightList` component
+      exposeComponent(LightList, {
+        description: 'Show a list of lights to the user',
+        children: 'any',
+        input: {
+          title: s.streaming.string('The name of the list'),
+        },
+      }),
     ],
     tools: [
       createTool({
@@ -163,9 +195,20 @@ export class ChatPanelComponent {
           const smartHome = inject(SmartHome);
           return smartHome.fetchLights();
         },
-      })
-    ]
-    // 1. Create a `controlLight()` tool
+      }),
+      createTool({
+        name: 'controlLight',
+        description: 'Control a light',
+        schema: s.object('Control light input', {
+          lightId: s.string('The id of the light'),
+          brightness: s.number('The brightness of the light'),
+        }),
+        handler: (input) => {
+          const smartHome = inject(SmartHome);
+          return smartHome.controlLight(input.lightId, input.brightness);
+        },
+      }),
+    ],
   });
 
   sendMessage(message: string) {
