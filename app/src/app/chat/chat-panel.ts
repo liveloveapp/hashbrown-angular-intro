@@ -1,7 +1,8 @@
 import { Component, effect, ElementRef, inject, viewChild } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { prompt, s } from '@hashbrownai/core';
-import { exposeComponent, RenderMessageComponent, uiChatResource } from '@hashbrownai/angular';
+import { createTool, exposeComponent, RenderMessageComponent, uiChatResource } from '@hashbrownai/angular';
+import { LightCard } from '../lights/light-card';
 import { SmartHome } from '../smart-home';
 import { Squircle } from '../squircle';
 import { ChatLayout } from './chat-layout';
@@ -145,9 +146,24 @@ export class ChatPanelComponent {
           data: s.streaming.string('The markdown content'),
         },
       }),
+      exposeComponent(LightCard, {
+        description: `This option shows a light to the user, with a dimmer for them to control the light.
+          Always prefer this option over printing a light's name. Always prefer putting these in a list.`,
+        input: {
+          lightId: s.string('The id of the light'),
+        },
+      }),
     ],
-    // 1. Add tools array.
-    // 2. Use the `createTool()` function to define a `getLights` tool.
+    tools: [
+      createTool({
+        name: 'getLights',
+        description: 'Get the current lights',
+        handler: () => {
+          const smartHome = inject(SmartHome);
+          return smartHome.fetchLights();
+        },
+      })
+    ]
   });
 
   sendMessage(message: string) {
