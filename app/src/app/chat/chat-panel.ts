@@ -18,9 +18,20 @@ import { Composer } from './composer';
       [appSquircleBorderWidth]="2"
       appSquircleBorderColor="#EEC7AD"
     >
+      @if (chat.isLoading()) {
+      <div class="chat-loading">
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      </div>
+      }
       <app-chat-layout>
-        <div class="chat-messages" #contentDiv>
-          <!-- 6: Render the chat messages -->
+        <div class="chat-messages">
+          @for (message of chat.value(); track $index) {
+          <div class="chat-message">
+            <p>{{ message.content }}</p>
+          </div>
+          } @if (chat.value().length === 0) {
+          <app-chat-prompts (selectPrompt)="sendMessage($event)" />
+          }
         </div>
         <app-chat-composer
           (sendMessage)="sendMessage($event)"
@@ -62,6 +73,7 @@ import { Composer } from './composer';
         flex-direction: column;
         gap: 16px;
         position: relative;
+        padding: 16px;
       }
     `,
   ],
@@ -69,14 +81,14 @@ import { Composer } from './composer';
 export class ChatPanelComponent {
   smartHome = inject(SmartHome);
 
-  /**
-   * 1. Define the chat resource
-   * 2. Specify the model to use.
-   * 3. Optionally, define the debug name.
-   * 4. Define the system prompt.
-   */
+  chat = chatResource({
+    model: 'gpt-4.1',
+    debugName: 'chatResource',
+    system:
+      'You are a helpful assistant that can answer questions and help with tasks.',
+  });
 
   sendMessage(message: string) {
-    // 5. Send the user message to the chat
+    this.chat.sendMessage({ role: 'user', content: message });
   }
 }
